@@ -28,6 +28,13 @@
     '[class*="pickArea"]',
   ].join(',');
 
+  // Never scan containers for the pick queue / autopick UI — they show
+  // players who are NOT drafted yet.
+  const EXCLUDED_CONTAINER_RE = /undrafted|queue|autopick/i;
+  // Drop text lines that reference a *suggested* pick, e.g.
+  // "Your autopick would be: Ja'Marr Chase / Cincinnati Bengals WR".
+  const EXCLUDED_LINE_RE = /autopick|auto-pick|on the clock|would be|queue/i;
+
   const SCAN_INTERVAL_MS = 3000;
   const MUTATION_DEBOUNCE_MS = 1000;
 
@@ -63,12 +70,15 @@
   function collectDraftedText() {
     const chunks = [];
     for (const el of document.querySelectorAll(DRAFTED_CONTAINER_SELECTORS)) {
-      // "undrafted" contains "drafted" — never scan available-player lists.
-      if (/undrafted/i.test(el.className)) continue;
+      if (EXCLUDED_CONTAINER_RE.test(String(el.className))) continue;
       // Skip nested matches; parents already contain their text.
       if (el.parentElement && el.parentElement.closest(DRAFTED_CONTAINER_SELECTORS)) continue;
       const text = el.innerText;
-      if (text) chunks.push(text);
+      if (!text) continue;
+      // Filter line-by-line so an excluded phrase nested inside a legit
+      // container (like the on-the-clock banner) can't leak player names in.
+      const lines = text.split('\n').filter((line) => !EXCLUDED_LINE_RE.test(line));
+      if (lines.length) chunks.push(lines.join('\n'));
     }
     return normalizeName(chunks.join('\n'));
   }
