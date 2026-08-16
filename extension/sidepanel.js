@@ -180,7 +180,10 @@ els.posFilters.addEventListener('click', (e) => {
   render();
 });
 
-els.showDrafted.addEventListener('change', render);
+els.showDrafted.addEventListener('change', () => {
+  chrome.storage.local.set({ showDrafted: els.showDrafted.checked });
+  render();
+});
 
 els.list.addEventListener('click', (e) => {
   const li = e.target.closest('.player');
@@ -198,8 +201,9 @@ chrome.storage.onChanged.addListener((changes, area) => {
 // --- Init ---
 
 (async function init() {
-  const stored = await chrome.storage.local.get(['rankings', 'drafted']);
+  const stored = await chrome.storage.local.get(['rankings', 'drafted', 'showDrafted']);
   drafted = stored.drafted || {};
+  els.showDrafted.checked = Boolean(stored.showDrafted);
 
   if (stored.rankings && stored.rankings.length) {
     rankings = stored.rankings;
