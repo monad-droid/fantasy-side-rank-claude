@@ -58,11 +58,22 @@
       const norm = normalizeName(p.name);
       const abbrevKey = initialLastKey(norm);
       const abbrevUnique = abbrevKey && abbrevCounts.get(abbrevKey) === 1;
+
+      // Defenses: a list entry like "Houston Texans DST" appears on ESPN as
+      // "Texans D/ST" (normalized: "texans d st"). Match on the nickname.
+      const altRes = [];
+      const parts = norm.split(' ');
+      if (parts.length >= 2 && parts[parts.length - 1] === 'dst') {
+        const nickname = parts[parts.length - 2];
+        altRes.push(nameRegex(`${nickname} d st`), nameRegex(`${nickname} dst`));
+      }
+
       return {
         name: p.name,
         norm,
         re: nameRegex(norm),
         abbrevRe: abbrevUnique ? nameRegex(abbrevKey) : null,
+        altRes,
       };
     });
   }
@@ -93,7 +104,11 @@
     const newlyDrafted = [];
     for (const p of players) {
       if (drafted[p.norm]) continue;
-      if (p.re.test(haystack) || (p.abbrevRe && p.abbrevRe.test(haystack))) {
+      if (
+        p.re.test(haystack) ||
+        (p.abbrevRe && p.abbrevRe.test(haystack)) ||
+        p.altRes.some((re) => re.test(haystack))
+      ) {
         newlyDrafted.push(p);
       }
     }

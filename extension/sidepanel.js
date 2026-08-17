@@ -23,12 +23,21 @@ let drafted = {};
 let activePos = 'ALL';
 
 // Matches lines like:
-//   "1. Jahmyr Gibbs, RB, DET (RB1)"
-//   "23) Jeremiyah Love, RB, ARZ"
-//   "Brock Bowers, TE, LV (TE1)"
+//   "1. Jahmyr Gibbs, RB, DET (RB1)"   (rank, name, pos, team, pos-rank)
+//   "1. Bijan Robinson, ATL (RB1)"     (no position column)
+//   "143. Houston Texans DST, HOU (DST1)"
 //   "Josh Allen"
 const LINE_RE =
   /^\s*(?:(\d+)[.):\-]?\s+)?([^,]+?)(?:\s*,\s*([A-Za-z/]{1,4}))?(?:\s*,\s*([A-Za-z]{2,4}))?\s*(?:\(([^)]+)\))?\s*$/;
+
+const POS_TOKENS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DST', 'D/ST', 'DEF', 'PK', 'FLEX']);
+
+function canonicalPos(raw) {
+  const p = String(raw || '').toUpperCase();
+  if (p === 'D/ST' || p === 'DEF') return 'DST';
+  if (p === 'PK') return 'K';
+  return p;
+}
 
 function parseRankings(text) {
   const players = [];
@@ -47,12 +56,28 @@ function parseRankings(text) {
     const norm = normalizeName(name);
     if (!norm || seen.has(norm)) continue;
     seen.add(norm);
+
+    // The first comma field is a position ("RB") or, when the position column
+    // is omitted, the team ("ATL"). Disambiguate via known position tokens.
+    let pos = (m[3] || '').toUpperCase();
+    let team = (m[4] || '').toUpperCase();
+    if (pos && !POS_TOKENS.has(pos)) {
+      if (!team) team = pos;
+      pos = '';
+    }
+    pos = canonicalPos(pos);
+    const posRank = m[5] || '';
+    if (!pos && posRank) {
+      const prefix = canonicalPos((posRank.match(/^([A-Za-z/]+)/) || [])[1]);
+      if (POS_TOKENS.has(prefix) || prefix === 'DST' || prefix === 'K') pos = prefix;
+    }
+
     players.push({
       rank: m[1] ? Number(m[1]) : players.length + 1,
       name,
-      pos: (m[3] || '').toUpperCase(),
-      team: (m[4] || '').toUpperCase(),
-      posRank: m[5] || '',
+      pos,
+      team,
+      posRank,
       norm,
     });
   }
@@ -60,7 +85,7 @@ function parseRankings(text) {
 }
 
 function posClass(pos) {
-  return ['QB', 'RB', 'WR', 'TE'].includes(pos) ? `pos-${pos}` : 'pos-other';
+  return ['QB', 'RB', 'WR', 'TE', 'K', 'DST'].includes(pos) ? `pos-${pos}` : 'pos-other';
 }
 
 function render() {
@@ -116,9 +141,13 @@ function render() {
     : '';
 }
 
-async function saveRankings(players) {
+async function saveRankings(players, source = 'user') {
   rankings = players;
-  await chrome.storage.local.set({ rankings: players });
+  await chrome.storage.local.set({
+    rankings: players,
+    rankingsSource: source,
+    defaultsVersion: DEFAULT_RANKINGS_VERSION,
+  });
 }
 
 async function toggleDrafted(norm) {
@@ -201,16 +230,27 @@ chrome.storage.onChanged.addListener((changes, area) => {
 // --- Init ---
 
 (async function init() {
-  const stored = await chrome.storage.local.get(['rankings', 'drafted', 'showDrafted']);
+  const stored = await chrome.storage.local.get([
+    'rankings',
+    'drafted',
+    'showDrafted',
+    'rankingsSource',
+    'defaultsVersion',
+  ]);
   drafted = stored.drafted || {};
   els.showDrafted.checked = Boolean(stored.showDrafted);
 
-  if (stored.rankings && stored.rankings.length) {
+  const hasRankings = stored.rankings && stored.rankings.length;
+  const defaultsOutdated =
+    stored.rankingsSource !== 'user' && stored.defaultsVersion !== DEFAULT_RANKINGS_VERSION;
+
+  if (hasRankings && !defaultsOutdated) {
     rankings = stored.rankings;
   } else {
-    // First run: preload the bundled default rankings.
+    // First run, or the bundled defaults changed and the user never loaded a
+    // custom list — preload the current default rankings.
     const { players } = parseRankings(DEFAULT_RANKINGS_TEXT);
-    await saveRankings(players);
+    await saveRankings(players, 'default');
   }
   render();
 })();

@@ -10,6 +10,8 @@
   --rb: #58b8a6;
   --wr: #5a9cf5;
   --te: #e0a34e;
+  --k: #7c8aa0;
+  --dst: #c4703b;
 }
 
 * {
@@ -219,6 +221,8 @@ button.ghost.danger:hover {
 .pos-RB { background: var(--rb); }
 .pos-WR { background: var(--wr); }
 .pos-TE { background: var(--te); }
+.pos-K { background: var(--k); }
+.pos-DST { background: var(--dst); }
 .pos-other { background: var(--text-dim); }
 
 .player.drafted {
