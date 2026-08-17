@@ -119,7 +119,30 @@
     }, MUTATION_DEBOUNCE_MS);
   }
 
+  // Auto-reset drafted marks when this is a *different* draft room than last
+  // time (new mock, new league). Keyed on the draft-identifying URL params so
+  // a refresh/reconnect of the same draft never wipes progress.
+  async function maybeResetForNewDraft() {
+    if (!inDraftRoom()) return;
+    const params = new URLSearchParams(location.search);
+    const draftKey =
+      location.pathname +
+      '|' +
+      ['leagueId', 'seasonId', 'draftId'].map((k) => params.get(k) || '').join('|');
+    const { draftKey: prevKey } = await chrome.storage.local.get('draftKey');
+    if (prevKey === draftKey) return;
+
+    const update = { draftKey };
+    if (prevKey !== undefined) {
+      update.drafted = {};
+      drafted = {};
+      console.log('[Draft Rank Tracker] new draft detected — reset drafted list');
+    }
+    await chrome.storage.local.set(update);
+  }
+
   async function loadState() {
+    await maybeResetForNewDraft();
     const { rankings = [], drafted: storedDrafted = {} } = await chrome.storage.local.get([
       'rankings',
       'drafted',
