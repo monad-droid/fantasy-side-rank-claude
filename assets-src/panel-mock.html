@@ -1,0 +1,65 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="sidepanel.css"></head><body><script>
+const scene = new URLSearchParams(location.search).get('scene') || 'hidden';
+const DRAFTED = Object.fromEntries([
+  'jahmyr gibbs','bijan robinson','jamarr chase','puka nacua','christian mccaffrey',
+  'jaxon smith-njigba','jonathan taylor','amon-ra st brown','ashton jeanty',
+  'james cook','justin jefferson','saquon barkley'
+].map(n => [n, true]));
+window.chrome = { storage: { local: {
+  _d: { drafted: DRAFTED, showDrafted: scene === 'drafted' },
+  async get(keys) { const out = {}; for (const k of (typeof keys === 'string' ? [keys] : keys)) if (k in this._d) out[k] = this._d[k]; return out; },
+  async set(o) { Object.assign(this._d, o); }
+}, onChanged: { addListener() {} } } };
+</script>
+    <header>
+      <h1>Draft Rank Tracker</h1>
+      <div class="header-actions">
+        <button id="editBtn" class="ghost" title="Paste / edit rankings">Edit list</button>
+        <button id="resetBtn" class="ghost danger" title="Un-draft everyone">Reset draft</button>
+      </div>
+    </header>
+
+    <section id="editor" class="hidden">
+      <p class="hint">
+        Paste your rankings, one player per line, e.g.<br />
+        <code>1. Jahmyr Gibbs, RB, DET (RB1)</code>
+      </p>
+      <textarea id="rankingsInput" spellcheck="false" placeholder="1. Jahmyr Gibbs, RB, DET (RB1)&#10;2. Bijan Robinson, RB, ATL (RB2)&#10;..."></textarea>
+      <div class="editor-actions">
+        <button id="loadBtn" class="primary">Load rankings</button>
+        <button id="cancelBtn" class="ghost">Cancel</button>
+      </div>
+      <p id="parseStatus" class="hint"></p>
+    </section>
+
+    <section id="listSection">
+      <div class="toolbar">
+        <div id="posFilters" class="filters">
+          <button class="filter active" data-pos="ALL">All</button>
+          <button class="filter" data-pos="QB">QB</button>
+          <button class="filter" data-pos="RB">RB</button>
+          <button class="filter" data-pos="WR">WR</button>
+          <button class="filter" data-pos="TE">TE</button>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="showDrafted" />
+          <span>Show drafted</span>
+        </label>
+      </div>
+      <div id="counts" class="counts"></div>
+      <ul id="playerList"></ul>
+      <p id="emptyState" class="hint hidden">
+        No rankings loaded yet — click <strong>Edit list</strong> and paste your board.
+      </p>
+    </section>
+
+    <footer>
+      <span class="hint">Tip: click a player to manually toggle drafted.</span>
+    </footer>
+
+    <script src="normalize.js"></script>
+    <script src="default-rankings.js"></script>
+    <script src="sidepanel.js"></script>
+  <script>
+if (scene === 'editor') setTimeout(() => document.getElementById('editBtn').click(), 200);
+</script></body></html>

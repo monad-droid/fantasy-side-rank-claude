@@ -1,0 +1,32 @@
+<!doctype html><html><head><meta charset='utf-8'><style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { width:1280px; height:800px; overflow:hidden; position:relative;
+    font-family: Arial, Helvetica, sans-serif; color:#e8edf2;
+    background: linear-gradient(135deg, #0c1116 0%, #10241a 55%, #0e5f34 130%); }
+  .stripe { position:absolute; width:2400px; height:90px; background:#ffffff; opacity:0.03; transform: rotate(-30deg); }
+  .left { position:absolute; left:70px; top:0; bottom:0; width:600px; display:flex; flex-direction:column; justify-content:center; gap:28px; }
+  .brand { display:flex; align-items:center; gap:16px; }
+  .brand img { width:56px; height:56px; border-radius:12px; }
+  .brand span { font-size:22px; font-weight:bold; letter-spacing:0.5px; }
+  .kicker { color:#3ddc74; font-size:17px; font-weight:bold; letter-spacing:3px; }
+  h1 { font-size:54px; line-height:1.12; font-weight:800; }
+  h1 em { font-style:normal; color:#3ddc74; }
+  ul { list-style:none; display:flex; flex-direction:column; gap:14px; margin-top:6px; }
+  li { font-size:20px; color:#b9c5d1; padding-left:30px; position:relative; }
+  li::before { content:'✓'; position:absolute; left:0; color:#3ddc74; font-weight:bold; }
+  .panel { position:absolute; right:80px; top:50%; transform:translateY(-50%);
+    width:392px; height:724px; border-radius:14px; overflow:hidden;
+    border:1px solid #2a323c; box-shadow: 0 30px 80px rgba(0,0,0,0.6); background:#101418; }
+  .panel iframe { width:380px; height:712px; border:0; margin:6px; }
+</style></head><body>
+  <div class='stripe' style='top:120px; left:-200px;'></div>
+  <div class='stripe' style='top:420px; left:-400px;'></div>
+  <div class='stripe' style='top:680px; left:100px;'></div>
+  <div class='left'>
+    <div class='brand'><img src='icon128.png'><span>Fantasy Draft Rank Tracker</span></div>
+    <div class='kicker'>FULL BOARD VIEW</div>
+    <h1>Watch the board<br><em>cross itself off</em></h1>
+    <ul><li>Flip on “Show drafted” to see every pick</li><li>Filter by QB / RB / WR / TE</li><li>Click any player to toggle manually</li></ul>
+  </div>
+  <div class='panel'><iframe src='panel-mock.html?scene=drafted'></iframe></div>
+</body></html>

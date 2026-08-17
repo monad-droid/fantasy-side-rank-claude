@@ -1,0 +1,89 @@
+<!doctype html><html><head><meta charset='utf-8'><style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { width:440px; height:280px; overflow:hidden; position:relative;
+    font-family: Arial, Helvetica, sans-serif; color:#e8edf2;
+    background: linear-gradient(135deg, #0c1116 0%, #10241a 55%, #0e5f34 130%);
+    display:flex; align-items:center; justify-content:center; }
+  .stripe { position:absolute; width:1320px; height:40px; background:#ffffff; opacity:0.035; transform:rotate(-30deg); }
+  .row { display:flex; align-items:center; gap:24px; position:relative; }
+  .icon { width:120px; height:120px; filter: drop-shadow(0 10px 24px rgba(0,0,0,0.5)); }
+  .icon svg { width:100%; height:100%; }
+  h1 { font-size:34px; font-weight:800; line-height:1.08; }
+  h1 .g { color:#3ddc74; }
+  p { font-size:15px; color:#b9c5d1; margin-top:10px; }
+</style></head><body>
+  <div class='stripe' style='top:15%; left:-440px;'></div>
+  <div class='stripe' style='top:65%; left:-220px;'></div>
+  <div class='row'>
+    <div class='icon'><svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1db954"/>
+      <stop offset="0.55" stop-color="#0e7a3c"/>
+      <stop offset="1" stop-color="#064e2b"/>
+    </linearGradient>
+    <linearGradient id="ball" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8a4a26"/>
+      <stop offset="0.5" stop-color="#6f3a1c"/>
+      <stop offset="1" stop-color="#4e2712"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="0.6" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="rounded">
+      <rect x="0" y="0" width="128" height="128" rx="26"/>
+    </clipPath>
+    <clipPath id="ballClip">
+      <ellipse cx="0" cy="0" rx="40" ry="25"/>
+    </clipPath>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <g clip-path="url(#rounded)">
+    <!-- field -->
+    <rect width="128" height="128" fill="url(#bg)"/>
+    <!-- faint diagonal yard lines -->
+    <g stroke="#ffffff" stroke-opacity="0.08" stroke-width="6">
+      <line x1="-20" y1="44" x2="80" y2="-56"/>
+      <line x1="-20" y1="84" x2="120" y2="-56"/>
+      <line x1="-20" y1="124" x2="160" y2="-56"/>
+      <line x1="8" y1="156" x2="188" y2="-24"/>
+      <line x1="48" y1="176" x2="208" y2="16"/>
+    </g>
+    <!-- soft glow behind ball -->
+    <circle cx="64" cy="66" r="46" fill="#ffffff" fill-opacity="0.10"/>
+
+    <!-- football -->
+    <g transform="translate(64 66) rotate(-28)" filter="url(#shadow)">
+      <ellipse cx="0" cy="0" rx="40" ry="25" fill="url(#ball)" stroke="#ffffff" stroke-width="4"/>
+      <g clip-path="url(#ballClip)">
+        <!-- sheen -->
+        <ellipse cx="0" cy="-10" rx="38" ry="14" fill="url(#sheen)"/>
+        <!-- end stripes -->
+        <line x1="-27" y1="-26" x2="-27" y2="26" stroke="#ffffff" stroke-width="6"/>
+        <line x1="27" y1="-26" x2="27" y2="26" stroke="#ffffff" stroke-width="6"/>
+      </g>
+      <!-- laces -->
+      <line x1="-14" y1="0" x2="14" y2="0" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/>
+      <g stroke="#ffffff" stroke-width="3.5" stroke-linecap="round">
+        <line x1="-10" y1="-4.5" x2="-10" y2="4.5"/>
+        <line x1="-3.5" y1="-4.5" x2="-3.5" y2="4.5"/>
+        <line x1="3.5" y1="-4.5" x2="3.5" y2="4.5"/>
+        <line x1="10" y1="-4.5" x2="10" y2="4.5"/>
+      </g>
+    </g>
+
+    <!-- rank-one badge -->
+    <g filter="url(#shadow)">
+      <circle cx="99" cy="30" r="19" fill="#101418" stroke="#ffffff" stroke-width="3.5"/>
+      <text x="99" y="31" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="800"
+            fill="#22c55e" text-anchor="middle" dominant-baseline="middle">#1</text>
+    </g>
+  </g>
+</svg></div>
+    <div><h1>Fantasy Draft<br><span class='g'>Rank Tracker</span></h1><p>Your rankings, auto-updated live</p></div>
+  </div>
+</body></html>
