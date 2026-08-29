@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Fantasy Draft Rank Tracker",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Paste your fantasy football rankings and automatically cross off players as they're drafted in your ESPN draft room.",
   "permissions": ["storage", "sidePanel"],
   "host_permissions": ["https://fantasy.espn.com/*"],
