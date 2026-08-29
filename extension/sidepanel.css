@@ -223,6 +223,11 @@ button.ghost.danger:hover {
   flex-shrink: 0;
 }
 
+/* Team has a new offensive play-caller this season (hover for who). */
+.player .team.pc-change {
+  color: #e0a34e;
+}
+
 .player .target {
   flex-shrink: 0;
   font-size: 11px;

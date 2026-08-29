@@ -32,7 +32,21 @@ let tiers = {};
 let targets = {};
 let avoid = {};
 let upside = {};
+let playcallers = {};
 let activePos = 'ALL';
+
+// Different sources abbreviate teams differently; canonicalize before lookups.
+const TEAM_ALIASES = { ARZ: 'ARI', HST: 'HOU', BLT: 'BAL', LA: 'LAR', WSH: 'WAS', JAC: 'JAX' };
+const canonicalTeam = (team) => TEAM_ALIASES[team] || team;
+
+function parsePlaycallers(text) {
+  const map = {};
+  for (const rawLine of text.split('\n')) {
+    const [team, note] = rawLine.split('\t').map((f) => (f || '').trim());
+    if (team) map[canonicalTeam(team.toUpperCase())] = note || 'New play-caller this season';
+  }
+  return map;
+}
 
 // Matches lines like:
 //   "1. Jahmyr Gibbs, RB, DET (RB1)"   (rank, name, pos, team, pos-rank)
@@ -261,6 +275,12 @@ function render() {
     const team = document.createElement('span');
     team.className = 'team';
     team.textContent = p.team;
+    const pcNote = playcallers[canonicalTeam(p.team)];
+    if (pcNote) {
+      team.classList.add('pc-change');
+      team.textContent = `🔄 ${p.team}`;
+      team.title = `Play-caller changed: ${pcNote}`;
+    }
 
     li.append(rank, pos, name);
     if (isAvoid) {
@@ -451,6 +471,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.targets) targets = changes.targets.newValue || {};
   if (changes.avoid) avoid = changes.avoid.newValue || {};
   if (changes.upside) upside = changes.upside.newValue || {};
+  if (changes.playcallers) playcallers = changes.playcallers.newValue || {};
   if (
     changes.drafted ||
     changes.rankings ||
@@ -481,7 +502,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
     'avoidDefaultsVersion',
     'upside',
     'upsideDefaultsVersion',
+    'playcallers',
+    'playcallersDefaultsVersion',
   ]);
+  playcallers = stored.playcallers || {};
   drafted = stored.drafted || {};
   tiers = stored.tiers || {};
   targets = stored.targets || {};
@@ -492,6 +516,15 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (stored.upsideDefaultsVersion !== DEFAULT_UPSIDE_VERSION) {
     upside = parseUpside(DEFAULT_UPSIDE_TEXT);
     await chrome.storage.local.set({ upside, upsideDefaultsVersion: DEFAULT_UPSIDE_VERSION });
+  }
+
+  // Play-caller changes always track the bundled defaults (no import UI).
+  if (stored.playcallersDefaultsVersion !== DEFAULT_PLAYCALLER_VERSION) {
+    playcallers = parsePlaycallers(DEFAULT_PLAYCALLER_TEXT);
+    await chrome.storage.local.set({
+      playcallers,
+      playcallersDefaultsVersion: DEFAULT_PLAYCALLER_VERSION,
+    });
   }
 
   // The do-not-draft list always tracks the bundled defaults (no import UI).
