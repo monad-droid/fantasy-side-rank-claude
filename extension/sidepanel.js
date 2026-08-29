@@ -31,6 +31,7 @@ let drafted = {};
 let tiers = {};
 let targets = {};
 let avoid = {};
+let upside = {};
 let activePos = 'ALL';
 
 // Matches lines like:
@@ -191,6 +192,27 @@ function parseTargets(text) {
   return targetMap;
 }
 
+// Parse upside grades: "Name<TAB>Grade<TAB>Basis". Grade U1/U2/U3 (any
+// suffix, e.g. "U3-Kyren Williams", "U2⚡") or a bare ⚡/dart.
+function parseUpside(text) {
+  const map = {};
+  for (const rawLine of text.split('\n')) {
+    const [name, grade, note] = rawLine.split('\t').map((f) => (f || '').trim());
+    if (!name || !grade) continue;
+    const norm = normalizeName(name);
+    if (!norm) continue;
+    const level = /^U1/i.test(grade)
+      ? 'U1'
+      : /^U2/i.test(grade)
+        ? 'U2'
+        : /^U3/i.test(grade)
+          ? 'U3'
+          : 'DART';
+    map[norm] = { level, flag: grade.includes('⚡'), label: grade, note: note || '' };
+  }
+  return map;
+}
+
 function posClass(pos) {
   return ['QB', 'RB', 'WR', 'TE', 'K', 'DST'].includes(pos) ? `pos-${pos}` : 'pos-other';
 }
@@ -254,6 +276,14 @@ function render() {
       target.textContent = '🎯';
       target.title = 'Draft target';
       li.append(target);
+    }
+    const up = upside[p.norm];
+    if (up) {
+      const chip = document.createElement('span');
+      chip.className = `upside upside-${up.level}`;
+      chip.textContent = up.level === 'DART' ? '⚡' : up.level + (up.flag ? '⚡' : '');
+      chip.title = `Upside ${up.label}${up.note ? ' — ' + up.note : ''}`;
+      li.append(chip);
     }
     const tierNum = tiers[p.norm];
     if (tierNum) {
@@ -420,7 +450,15 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.tiers) tiers = changes.tiers.newValue || {};
   if (changes.targets) targets = changes.targets.newValue || {};
   if (changes.avoid) avoid = changes.avoid.newValue || {};
-  if (changes.drafted || changes.rankings || changes.tiers || changes.targets || changes.avoid)
+  if (changes.upside) upside = changes.upside.newValue || {};
+  if (
+    changes.drafted ||
+    changes.rankings ||
+    changes.tiers ||
+    changes.targets ||
+    changes.avoid ||
+    changes.upside
+  )
     render();
 });
 
@@ -441,11 +479,20 @@ chrome.storage.onChanged.addListener((changes, area) => {
     'targetsDefaultsVersion',
     'avoid',
     'avoidDefaultsVersion',
+    'upside',
+    'upsideDefaultsVersion',
   ]);
   drafted = stored.drafted || {};
   tiers = stored.tiers || {};
   targets = stored.targets || {};
   avoid = stored.avoid || {};
+  upside = stored.upside || {};
+
+  // Upside grades always track the bundled defaults (no import UI).
+  if (stored.upsideDefaultsVersion !== DEFAULT_UPSIDE_VERSION) {
+    upside = parseUpside(DEFAULT_UPSIDE_TEXT);
+    await chrome.storage.local.set({ upside, upsideDefaultsVersion: DEFAULT_UPSIDE_VERSION });
+  }
 
   // The do-not-draft list always tracks the bundled defaults (no import UI).
   if (stored.avoidDefaultsVersion !== DEFAULT_AVOID_VERSION) {
