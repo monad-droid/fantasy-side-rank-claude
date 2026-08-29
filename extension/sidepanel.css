@@ -223,6 +223,12 @@ button.ghost.danger:hover {
   flex-shrink: 0;
 }
 
+.player .target {
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1;
+}
+
 .player .tier {
   flex-shrink: 0;
   font-size: 10px;

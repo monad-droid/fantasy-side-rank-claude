@@ -11,6 +11,10 @@ const els = {
   loadTiersBtn: document.getElementById('loadTiersBtn'),
   clearTiersBtn: document.getElementById('clearTiersBtn'),
   tierStatus: document.getElementById('tierStatus'),
+  targetsInput: document.getElementById('targetsInput'),
+  loadTargetsBtn: document.getElementById('loadTargetsBtn'),
+  clearTargetsBtn: document.getElementById('clearTargetsBtn'),
+  targetStatus: document.getElementById('targetStatus'),
   editBtn: document.getElementById('editBtn'),
   resetBtn: document.getElementById('resetBtn'),
   loadBtn: document.getElementById('loadBtn'),
@@ -25,6 +29,7 @@ const els = {
 let rankings = [];
 let drafted = {};
 let tiers = {};
+let targets = {};
 let activePos = 'ALL';
 
 // Matches lines like:
@@ -162,6 +167,25 @@ function parseTiers(text) {
   return tierMap;
 }
 
+// Parse a targets list: one player per line. Anything after a comma or tab
+// ("DJ Moore, Buffalo Bills", "Rome Odunze\tCHI\tWR") is ignored, so article
+// player-header lines paste straight in; long prose lines are skipped. Junk
+// short lines are harmless — the indicator only shows for ranked players.
+const TARGET_LINE_RE = /^([A-Za-z][A-Za-z0-9 .'’-]{1,39}?)(?:[,\t].*)?$/;
+
+function parseTargets(text) {
+  const targetMap = {};
+  for (const rawLine of text.split('\n')) {
+    const line = rawLine.trim();
+    if (!line || line.length > 60) continue;
+    const m = line.match(TARGET_LINE_RE);
+    if (!m) continue;
+    const norm = normalizeName(m[1]);
+    if (norm) targetMap[norm] = true;
+  }
+  return targetMap;
+}
+
 function posClass(pos) {
   return ['QB', 'RB', 'WR', 'TE', 'K', 'DST'].includes(pos) ? `pos-${pos}` : 'pos-other';
 }
@@ -210,6 +234,13 @@ function render() {
     team.textContent = p.team;
 
     li.append(rank, pos, name);
+    if (targets[p.norm]) {
+      const target = document.createElement('span');
+      target.className = 'target';
+      target.textContent = '🎯';
+      target.title = 'Draft target';
+      li.append(target);
+    }
     const tierNum = tiers[p.norm];
     if (tierNum) {
       const tier = document.createElement('span');
@@ -310,6 +341,36 @@ els.clearTiersBtn.addEventListener('click', async () => {
   render();
 });
 
+els.loadTargetsBtn.addEventListener('click', async () => {
+  const targetMap = parseTargets(els.targetsInput.value);
+  const count = Object.keys(targetMap).length;
+  if (count === 0) {
+    els.targetStatus.textContent = 'No player names found — one per line.';
+    return;
+  }
+  targets = targetMap;
+  await chrome.storage.local.set({
+    targets: targetMap,
+    targetsSource: 'user',
+    targetsDefaultsVersion: DEFAULT_TARGETS_VERSION,
+  });
+  const matched = rankings.filter((p) => targets[p.norm]).length;
+  els.targetStatus.textContent = `Loaded ${count} targets — ${matched} matched to your board.`;
+  render();
+});
+
+els.clearTargetsBtn.addEventListener('click', async () => {
+  targets = {};
+  els.targetsInput.value = '';
+  await chrome.storage.local.set({
+    targets: {},
+    targetsSource: 'user',
+    targetsDefaultsVersion: DEFAULT_TARGETS_VERSION,
+  });
+  els.targetStatus.textContent = 'Targets cleared.';
+  render();
+});
+
 els.resetBtn.addEventListener('click', async () => {
   if (!confirm('Mark all players as available again?')) return;
   drafted = {};
@@ -343,7 +404,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.drafted) drafted = changes.drafted.newValue || {};
   if (changes.rankings) rankings = changes.rankings.newValue || [];
   if (changes.tiers) tiers = changes.tiers.newValue || {};
-  if (changes.drafted || changes.rankings || changes.tiers) render();
+  if (changes.targets) targets = changes.targets.newValue || {};
+  if (changes.drafted || changes.rankings || changes.tiers || changes.targets) render();
 });
 
 // --- Init ---
@@ -358,9 +420,24 @@ chrome.storage.onChanged.addListener((changes, area) => {
     'tiers',
     'tiersSource',
     'tiersDefaultsVersion',
+    'targets',
+    'targetsSource',
+    'targetsDefaultsVersion',
   ]);
   drafted = stored.drafted || {};
   tiers = stored.tiers || {};
+  targets = stored.targets || {};
+
+  const targetsOutdated =
+    stored.targetsSource !== 'user' && stored.targetsDefaultsVersion !== DEFAULT_TARGETS_VERSION;
+  if (!stored.targets || targetsOutdated) {
+    targets = parseTargets(DEFAULT_TARGETS_TEXT);
+    await chrome.storage.local.set({
+      targets,
+      targetsSource: 'default',
+      targetsDefaultsVersion: DEFAULT_TARGETS_VERSION,
+    });
+  }
 
   // First run, or the bundled default tiers changed and the user never loaded
   // custom tiers — preload the current defaults.

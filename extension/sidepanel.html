@@ -37,6 +37,17 @@
         <button id="clearTiersBtn" class="ghost">Clear tiers</button>
       </div>
       <p id="tierStatus" class="hint"></p>
+      <div class="divider"></div>
+      <p class="hint">
+        Targets import (optional): one player name per line (extra columns after a
+        comma or tab are ignored). Targeted players get a 🎯 on the board.
+      </p>
+      <textarea id="targetsInput" spellcheck="false" placeholder="Rome Odunze&#10;Bucky Irving&#10;..."></textarea>
+      <div class="editor-actions">
+        <button id="loadTargetsBtn" class="primary">Load targets</button>
+        <button id="clearTargetsBtn" class="ghost">Clear targets</button>
+      </div>
+      <p id="targetStatus" class="hint"></p>
     </section>
 
     <section id="listSection">
@@ -69,6 +80,7 @@
     <script src="normalize.js"></script>
     <script src="default-rankings.js"></script>
     <script src="default-tiers.js"></script>
+    <script src="default-targets.js"></script>
     <script src="sidepanel.js"></script>
   </body>
 </html>
