@@ -7,6 +7,10 @@ const els = {
   editor: document.getElementById('editor'),
   input: document.getElementById('rankingsInput'),
   parseStatus: document.getElementById('parseStatus'),
+  tiersInput: document.getElementById('tiersInput'),
+  loadTiersBtn: document.getElementById('loadTiersBtn'),
+  clearTiersBtn: document.getElementById('clearTiersBtn'),
+  tierStatus: document.getElementById('tierStatus'),
   editBtn: document.getElementById('editBtn'),
   resetBtn: document.getElementById('resetBtn'),
   loadBtn: document.getElementById('loadBtn'),
@@ -20,6 +24,7 @@ const els = {
 
 let rankings = [];
 let drafted = {};
+let tiers = {};
 let activePos = 'ALL';
 
 // Matches lines like:
@@ -130,6 +135,33 @@ function parseRankings(text) {
   return { players, errors };
 }
 
+// Parse a tier article/list: "Tier N: ..." headers set the current tier, and
+// short "Player Name, TEAM" lines under them get that tier number. Everything
+// else (prose paragraphs, photo captions) is ignored. Tier numbering restarts
+// per position section, which is fine — each player belongs to one position.
+const TIER_HEADER_RE = /^tier\s+(\d+)\b/i;
+const TIER_PLAYER_RE = /^([A-Za-z][A-Za-z .'’’-]{1,39}?),\s*([A-Z]{2,4})\s*$/;
+
+function parseTiers(text) {
+  const tierMap = {};
+  let current = null;
+  for (const rawLine of text.split('\n')) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const header = line.match(TIER_HEADER_RE);
+    if (header) {
+      current = Number(header[1]);
+      continue;
+    }
+    if (current === null) continue;
+    const m = line.match(TIER_PLAYER_RE);
+    if (!m) continue;
+    const norm = normalizeName(m[1]);
+    if (norm && !(norm in tierMap)) tierMap[norm] = current;
+  }
+  return tierMap;
+}
+
 function posClass(pos) {
   return ['QB', 'RB', 'WR', 'TE', 'K', 'DST'].includes(pos) ? `pos-${pos}` : 'pos-other';
 }
@@ -177,7 +209,16 @@ function render() {
     team.className = 'team';
     team.textContent = p.team;
 
-    li.append(rank, pos, name, team);
+    li.append(rank, pos, name);
+    const tierNum = tiers[p.norm];
+    if (tierNum) {
+      const tier = document.createElement('span');
+      tier.className = `tier tier-${Math.min(tierNum, 3)}`;
+      tier.textContent = `T${tierNum}`;
+      tier.title = `Tier ${tierNum} at ${p.pos || 'position'}`;
+      li.append(tier);
+    }
+    li.append(team);
     frag.appendChild(li);
   }
 
@@ -238,6 +279,29 @@ els.loadBtn.addEventListener('click', async () => {
   }
 });
 
+els.loadTiersBtn.addEventListener('click', async () => {
+  const tierMap = parseTiers(els.tiersInput.value);
+  const tierCount = Object.keys(tierMap).length;
+  if (tierCount === 0) {
+    els.tierStatus.textContent =
+      'No tiers found — expected "Tier N:" headers with "Player Name, TEAM" lines below.';
+    return;
+  }
+  tiers = tierMap;
+  await chrome.storage.local.set({ tiers: tierMap });
+  const matched = rankings.filter((p) => tiers[p.norm]).length;
+  els.tierStatus.textContent = `Loaded tiers for ${tierCount} players — ${matched} of your ${rankings.length} ranked players tagged.`;
+  render();
+});
+
+els.clearTiersBtn.addEventListener('click', async () => {
+  tiers = {};
+  els.tiersInput.value = '';
+  await chrome.storage.local.set({ tiers: {} });
+  els.tierStatus.textContent = 'Tiers cleared.';
+  render();
+});
+
 els.resetBtn.addEventListener('click', async () => {
   if (!confirm('Mark all players as available again?')) return;
   drafted = {};
@@ -270,7 +334,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
   if (changes.drafted) drafted = changes.drafted.newValue || {};
   if (changes.rankings) rankings = changes.rankings.newValue || [];
-  if (changes.drafted || changes.rankings) render();
+  if (changes.tiers) tiers = changes.tiers.newValue || {};
+  if (changes.drafted || changes.rankings || changes.tiers) render();
 });
 
 // --- Init ---
@@ -282,8 +347,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
     'showDrafted',
     'rankingsSource',
     'defaultsVersion',
+    'tiers',
   ]);
   drafted = stored.drafted || {};
+  tiers = stored.tiers || {};
   els.showDrafted.checked = Boolean(stored.showDrafted);
 
   const hasRankings = stored.rankings && stored.rankings.length;

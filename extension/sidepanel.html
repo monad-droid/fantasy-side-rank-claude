@@ -25,6 +25,18 @@
         <button id="cancelBtn" class="ghost">Cancel</button>
       </div>
       <p id="parseStatus" class="hint"></p>
+      <div class="divider"></div>
+      <p class="hint">
+        Tier import (optional): paste a tier list or article. Lines like
+        <code>Tier 3: ...</code> start a tier; <code>Player Name, TEAM</code> lines
+        below it get that tier number. Prose is ignored.
+      </p>
+      <textarea id="tiersInput" spellcheck="false" placeholder="Tier 1: The Superstars&#10;Brock Bowers, LV&#10;Trey McBride, ARI&#10;&#10;Tier 2: Rising Stars&#10;..."></textarea>
+      <div class="editor-actions">
+        <button id="loadTiersBtn" class="primary">Load tiers</button>
+        <button id="clearTiersBtn" class="ghost">Clear tiers</button>
+      </div>
+      <p id="tierStatus" class="hint"></p>
     </section>
 
     <section id="listSection">
