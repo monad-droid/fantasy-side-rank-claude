@@ -233,15 +233,15 @@ button.ghost.danger:hover {
   color: var(--text-dim);
 }
 
-.player .tier.tier-1 {
-  border-color: #d4a942;
-  color: #d4a942;
-}
-
-.player .tier.tier-2 {
-  border-color: var(--accent);
-  color: var(--accent);
-}
+/* Tier color ramp: hot at the top, cooling off as tiers get deeper.
+   Tier 8 and beyond share the neutral gray. */
+.player .tier.tier-1 { border-color: #e8b33d; color: #e8b33d; }
+.player .tier.tier-2 { border-color: #3ddc74; color: #3ddc74; }
+.player .tier.tier-3 { border-color: #3ec5cf; color: #3ec5cf; }
+.player .tier.tier-4 { border-color: #5a9cf5; color: #5a9cf5; }
+.player .tier.tier-5 { border-color: #a78bfa; color: #a78bfa; }
+.player .tier.tier-6 { border-color: #ef6fbe; color: #ef6fbe; }
+.player .tier.tier-7 { border-color: #f08c4a; color: #f08c4a; }
 
 .player .pos {
   flex-shrink: 0;

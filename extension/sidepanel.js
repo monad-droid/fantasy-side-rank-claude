@@ -213,7 +213,7 @@ function render() {
     const tierNum = tiers[p.norm];
     if (tierNum) {
       const tier = document.createElement('span');
-      tier.className = `tier tier-${Math.min(tierNum, 3)}`;
+      tier.className = `tier tier-${Math.min(tierNum, 8)}`;
       tier.textContent = `T${tierNum}`;
       tier.title = `Tier ${tierNum} at ${p.pos || 'position'}`;
       li.append(tier);
@@ -288,7 +288,11 @@ els.loadTiersBtn.addEventListener('click', async () => {
     return;
   }
   tiers = tierMap;
-  await chrome.storage.local.set({ tiers: tierMap });
+  await chrome.storage.local.set({
+    tiers: tierMap,
+    tiersSource: 'user',
+    tiersDefaultsVersion: DEFAULT_TIERS_VERSION,
+  });
   const matched = rankings.filter((p) => tiers[p.norm]).length;
   els.tierStatus.textContent = `Loaded tiers for ${tierCount} players — ${matched} of your ${rankings.length} ranked players tagged.`;
   render();
@@ -297,7 +301,11 @@ els.loadTiersBtn.addEventListener('click', async () => {
 els.clearTiersBtn.addEventListener('click', async () => {
   tiers = {};
   els.tiersInput.value = '';
-  await chrome.storage.local.set({ tiers: {} });
+  await chrome.storage.local.set({
+    tiers: {},
+    tiersSource: 'user',
+    tiersDefaultsVersion: DEFAULT_TIERS_VERSION,
+  });
   els.tierStatus.textContent = 'Tiers cleared.';
   render();
 });
@@ -348,9 +356,24 @@ chrome.storage.onChanged.addListener((changes, area) => {
     'rankingsSource',
     'defaultsVersion',
     'tiers',
+    'tiersSource',
+    'tiersDefaultsVersion',
   ]);
   drafted = stored.drafted || {};
   tiers = stored.tiers || {};
+
+  // First run, or the bundled default tiers changed and the user never loaded
+  // custom tiers — preload the current defaults.
+  const tiersOutdated =
+    stored.tiersSource !== 'user' && stored.tiersDefaultsVersion !== DEFAULT_TIERS_VERSION;
+  if (!stored.tiers || tiersOutdated) {
+    tiers = parseTiers(DEFAULT_TIERS_TEXT);
+    await chrome.storage.local.set({
+      tiers,
+      tiersSource: 'default',
+      tiersDefaultsVersion: DEFAULT_TIERS_VERSION,
+    });
+  }
   els.showDrafted.checked = Boolean(stored.showDrafted);
 
   const hasRankings = stored.rankings && stored.rankings.length;
