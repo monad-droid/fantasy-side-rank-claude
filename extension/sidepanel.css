@@ -272,6 +272,26 @@ button.ghost.danger:hover {
   opacity: 0.45;
 }
 
+/* Do-not-draft: grayed so it never reads as a real pick (no strikethrough,
+   so it stays distinguishable from drafted). */
+.player.avoid {
+  opacity: 0.4;
+}
+
+.player.avoid .name {
+  color: var(--text-dim);
+}
+
+.player .dnd {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+
 .player.drafted .name {
   text-decoration: line-through;
 }

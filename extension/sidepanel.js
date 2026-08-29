@@ -30,6 +30,7 @@ let rankings = [];
 let drafted = {};
 let tiers = {};
 let targets = {};
+let avoid = {};
 let activePos = 'ALL';
 
 // Matches lines like:
@@ -146,6 +147,9 @@ function parseRankings(text) {
 // per position section, which is fine — each player belongs to one position.
 const TIER_HEADER_RE = /^tier\s+(\d+)\b/i;
 const TIER_PLAYER_RE = /^([A-Za-z][A-Za-z .'’’-]{1,39}?),\s*([A-Z]{2,4})\s*$/;
+// Bare-name line ("Rome Odunze"). Junk short prose lines are harmless — a tier
+// only shows for players actually on the board.
+const TIER_BARE_NAME_RE = /^[A-Za-z][A-Za-z0-9 .'’-]{1,39}$/;
 
 function parseTiers(text) {
   const tierMap = {};
@@ -160,8 +164,9 @@ function parseTiers(text) {
     }
     if (current === null) continue;
     const m = line.match(TIER_PLAYER_RE);
-    if (!m) continue;
-    const norm = normalizeName(m[1]);
+    const name = m ? m[1] : TIER_BARE_NAME_RE.test(line) ? line : null;
+    if (!name) continue;
+    const norm = normalizeName(name);
     if (norm && !(norm in tierMap)) tierMap[norm] = current;
   }
   return tierMap;
@@ -210,7 +215,9 @@ function render() {
 
     const li = document.createElement('li');
     li.className = 'player' + (isDrafted ? ' drafted' : '');
-    if (!isDrafted && !nextUpMarked) {
+    const isAvoid = Boolean(avoid[p.norm]);
+    if (isAvoid) li.classList.add('avoid');
+    if (!isDrafted && !isAvoid && !nextUpMarked) {
       li.classList.add('next-up');
       nextUpMarked = true;
     }
@@ -234,6 +241,13 @@ function render() {
     team.textContent = p.team;
 
     li.append(rank, pos, name);
+    if (isAvoid) {
+      const dnd = document.createElement('span');
+      dnd.className = 'dnd';
+      dnd.textContent = 'DND';
+      dnd.title = 'On the do-not-draft list';
+      li.append(dnd);
+    }
     if (targets[p.norm]) {
       const target = document.createElement('span');
       target.className = 'target';
@@ -405,7 +419,9 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.rankings) rankings = changes.rankings.newValue || [];
   if (changes.tiers) tiers = changes.tiers.newValue || {};
   if (changes.targets) targets = changes.targets.newValue || {};
-  if (changes.drafted || changes.rankings || changes.tiers || changes.targets) render();
+  if (changes.avoid) avoid = changes.avoid.newValue || {};
+  if (changes.drafted || changes.rankings || changes.tiers || changes.targets || changes.avoid)
+    render();
 });
 
 // --- Init ---
@@ -423,10 +439,23 @@ chrome.storage.onChanged.addListener((changes, area) => {
     'targets',
     'targetsSource',
     'targetsDefaultsVersion',
+    'avoid',
+    'avoidDefaultsVersion',
   ]);
   drafted = stored.drafted || {};
   tiers = stored.tiers || {};
   targets = stored.targets || {};
+  avoid = stored.avoid || {};
+
+  // The do-not-draft list always tracks the bundled defaults (no import UI).
+  if (stored.avoidDefaultsVersion !== DEFAULT_AVOID_VERSION) {
+    avoid = {};
+    for (const line of DEFAULT_AVOID_TEXT.split('\n')) {
+      const norm = normalizeName(line.trim());
+      if (norm) avoid[norm] = true;
+    }
+    await chrome.storage.local.set({ avoid, avoidDefaultsVersion: DEFAULT_AVOID_VERSION });
+  }
 
   const targetsOutdated =
     stored.targetsSource !== 'user' && stored.targetsDefaultsVersion !== DEFAULT_TARGETS_VERSION;
