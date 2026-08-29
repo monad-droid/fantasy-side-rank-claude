@@ -56,24 +56,31 @@
 
     players = rankings.map((p) => {
       const norm = normalizeName(p.name);
-      const abbrevKey = initialLastKey(norm);
-      const abbrevUnique = abbrevKey && abbrevCounts.get(abbrevKey) === 1;
+      const isDst = (p.pos || '').toUpperCase() === 'DST' || / dst$/.test(norm);
 
-      // Defenses: a list entry like "Houston Texans DST" appears on ESPN as
-      // "Texans D/ST" (normalized: "texans d st"). Match on the nickname.
-      const altRes = [];
-      const parts = norm.split(' ');
-      if (parts.length >= 2 && parts[parts.length - 1] === 'dst') {
-        const nickname = parts[parts.length - 2];
-        altRes.push(nameRegex(`${nickname} d st`), nameRegex(`${nickname} dst`));
+      if (isDst) {
+        // Defenses are listed as "Houston Texans DST" or just "Seahawks" (with
+        // pos DST) but appear on ESPN as "Texans D/ST" (normalized:
+        // "texans d st"). Only match D/ST-suffixed forms — a bare nickname
+        // like "seahawks" could show up in unrelated text.
+        const base = norm.replace(/ dst$/, '');
+        const nickname = base.split(' ').pop();
+        const variants = new Set([
+          `${base} d st`,
+          `${base} dst`,
+          `${nickname} d st`,
+          `${nickname} dst`,
+        ]);
+        return { name: p.name, norm, res: [...variants].map(nameRegex), abbrevRe: null };
       }
 
+      const abbrevKey = initialLastKey(norm);
+      const abbrevUnique = abbrevKey && abbrevCounts.get(abbrevKey) === 1;
       return {
         name: p.name,
         norm,
-        re: nameRegex(norm),
+        res: [nameRegex(norm)],
         abbrevRe: abbrevUnique ? nameRegex(abbrevKey) : null,
-        altRes,
       };
     });
   }
@@ -104,11 +111,7 @@
     const newlyDrafted = [];
     for (const p of players) {
       if (drafted[p.norm]) continue;
-      if (
-        p.re.test(haystack) ||
-        (p.abbrevRe && p.abbrevRe.test(haystack)) ||
-        p.altRes.some((re) => re.test(haystack))
-      ) {
+      if (p.res.some((re) => re.test(haystack)) || (p.abbrevRe && p.abbrevRe.test(haystack))) {
         newlyDrafted.push(p);
       }
     }

@@ -39,6 +39,31 @@ function canonicalPos(raw) {
   return p;
 }
 
+// Tab-separated lines, e.g. "Jahmyr Gibbs\tDET\tRB" (optionally with a
+// leading rank column and/or a positional-rank column in any order).
+function parseTabLine(line) {
+  const fields = line.split('\t').map((f) => f.trim()).filter(Boolean);
+  if (fields.length < 2) return null;
+  let rank = null;
+  if (/^\d+[.)]?$/.test(fields[0])) rank = parseInt(fields.shift(), 10);
+  const name = fields.shift();
+  // Reject rank-like leftovers, but keep real names that start with a digit
+  // ("49ers").
+  if (!name || /^\d+[.)]?$/.test(name)) return null;
+
+  let pos = '';
+  let team = '';
+  let posRank = '';
+  for (const f of fields) {
+    const canon = canonicalPos(f);
+    if (POS_TOKENS.has(canon)) pos = canon;
+    else if (/^(QB|RB|WR|TE|K|PK|DST|DEF)\d+$/i.test(f)) posRank = f.toUpperCase();
+    else if (/^[A-Za-z]{2,4}$/.test(f) && !team) team = f.toUpperCase();
+  }
+  if (!pos && posRank) pos = canonicalPos(posRank.match(/^[A-Za-z]+/)[0]);
+  return { rank, name, pos, team, posRank };
+}
+
 function parseRankings(text) {
   const players = [];
   const errors = [];
@@ -47,6 +72,27 @@ function parseRankings(text) {
   for (const rawLine of text.split('\n')) {
     const line = rawLine.trim();
     if (!line) continue;
+
+    if (line.includes('\t')) {
+      const p = parseTabLine(line);
+      if (!p) {
+        errors.push(line);
+        continue;
+      }
+      const norm = normalizeName(p.name);
+      if (!norm || seen.has(norm)) continue;
+      seen.add(norm);
+      players.push({
+        rank: p.rank || players.length + 1,
+        name: p.name,
+        pos: p.pos,
+        team: p.team,
+        posRank: p.posRank,
+        norm,
+      });
+      continue;
+    }
+
     const m = line.match(LINE_RE);
     if (!m || !m[2]) {
       errors.push(line);
