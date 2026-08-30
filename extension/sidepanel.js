@@ -33,6 +33,7 @@ let targets = {};
 let avoid = {};
 let upside = {};
 let playcallers = {};
+let pcPlayers = {};
 let activePos = 'ALL';
 
 // Different sources abbreviate teams differently; canonicalize before lookups.
@@ -44,6 +45,19 @@ function parsePlaycallers(text) {
   for (const rawLine of text.split('\n')) {
     const [team, note] = rawLine.split('\t').map((f) => (f || '').trim());
     if (team) map[canonicalTeam(team.toUpperCase())] = note || 'New play-caller this season';
+  }
+  return map;
+}
+
+// Player-specific bullish/bearish reads on a play-caller change
+// ("Name<TAB>+|-<TAB>reason").
+function parsePcPlayers(text) {
+  const map = {};
+  for (const rawLine of text.split('\n')) {
+    const [name, dir, reason] = rawLine.split('\t').map((f) => (f || '').trim());
+    if (!name || (dir !== '+' && dir !== '-')) continue;
+    const norm = normalizeName(name);
+    if (norm) map[norm] = { dir, reason: reason || '' };
   }
   return map;
 }
@@ -277,9 +291,17 @@ function render() {
     team.textContent = p.team;
     const pcNote = playcallers[canonicalTeam(p.team)];
     if (pcNote) {
-      team.classList.add('pc-change');
-      team.textContent = `🔄 ${p.team}`;
-      team.title = `Play-caller changed: ${pcNote}`;
+      const call = pcPlayers[p.norm];
+      if (call) {
+        const bull = call.dir === '+';
+        team.classList.add(bull ? 'pc-bull' : 'pc-bear');
+        team.textContent = `${bull ? '▲' : '▼'} ${p.team}`;
+        team.title = `New play-caller, ${bull ? 'bullish' : 'bearish'} for this player: ${call.reason} (${pcNote})`;
+      } else {
+        team.classList.add('pc-change');
+        team.textContent = `🔄 ${p.team}`;
+        team.title = `Play-caller changed: ${pcNote}`;
+      }
     }
 
     li.append(rank, pos, name);
@@ -496,6 +518,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.avoid) avoid = changes.avoid.newValue || {};
   if (changes.upside) upside = changes.upside.newValue || {};
   if (changes.playcallers) playcallers = changes.playcallers.newValue || {};
+  if (changes.pcPlayers) pcPlayers = changes.pcPlayers.newValue || {};
   if (
     changes.drafted ||
     changes.rankings ||
@@ -528,8 +551,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
     'upsideDefaultsVersion',
     'playcallers',
     'playcallersDefaultsVersion',
+    'pcPlayers',
   ]);
   playcallers = stored.playcallers || {};
+  pcPlayers = stored.pcPlayers || {};
   drafted = stored.drafted || {};
   tiers = stored.tiers || {};
   targets = stored.targets || {};
@@ -545,8 +570,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
   // Play-caller changes always track the bundled defaults (no import UI).
   if (stored.playcallersDefaultsVersion !== DEFAULT_PLAYCALLER_VERSION) {
     playcallers = parsePlaycallers(DEFAULT_PLAYCALLER_TEXT);
+    pcPlayers = parsePcPlayers(DEFAULT_PC_PLAYERS_TEXT);
     await chrome.storage.local.set({
       playcallers,
+      pcPlayers,
       playcallersDefaultsVersion: DEFAULT_PLAYCALLER_VERSION,
     });
   }
