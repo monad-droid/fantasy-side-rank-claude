@@ -462,6 +462,30 @@ els.list.addEventListener('click', (e) => {
   if (li) toggleDrafted(li.dataset.norm);
 });
 
+// Close the panel with a two-finger left-to-right trackpad swipe. The gesture
+// arrives as wheel events with horizontal delta; with natural scrolling,
+// fingers moving right produce negative deltaX. Accumulate a decisive
+// horizontal swipe (ignoring vertical list scrolling) and close the panel.
+const SWIPE_CLOSE_DISTANCE = 350;
+const SWIPE_RESET_MS = 250;
+let swipeDistance = 0;
+let lastWheelAt = 0;
+
+window.addEventListener(
+  'wheel',
+  (e) => {
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return; // vertical scroll
+    const now = Date.now();
+    if (now - lastWheelAt > SWIPE_RESET_MS) swipeDistance = 0;
+    lastWheelAt = now;
+    swipeDistance += e.deltaX;
+    // Don't close mid-edit — an accidental swipe would lose the paste.
+    if (!els.editor.classList.contains('hidden')) return;
+    if (swipeDistance < -SWIPE_CLOSE_DISTANCE) window.close();
+  },
+  { passive: true }
+);
+
 // Live updates from the content script (or another panel instance).
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
