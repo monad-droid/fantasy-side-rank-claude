@@ -222,23 +222,6 @@ button.ghost.danger:hover {
   font-size: 11px;
   flex-shrink: 0;
 }
-
-/* Team has a new offensive play-caller this season (hover for who). Green ▲ /
-   red ▼ when the change has a player-specific bullish/bearish read. */
-.player .team.pc-change {
-  color: #e0a34e;
-}
-
-.player .team.pc-bull {
-  color: var(--accent);
-  font-weight: 700;
-}
-
-.player .team.pc-bear {
-  color: var(--danger);
-  font-weight: 700;
-}
-
 .player .target {
   flex-shrink: 0;
   font-size: 11px;
